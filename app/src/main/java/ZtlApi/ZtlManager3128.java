@@ -196,7 +196,7 @@ public class ZtlManager3128 extends ZtlManager {
 
     //增大音量，音量+1	1
     @Override
-    public int SetRaiseSystemVolume() {
+    public int setRaiseSystemVolume() {
         try {
             AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
             am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND);
@@ -210,7 +210,7 @@ public class ZtlManager3128 extends ZtlManager {
 
     //减小音量，音量-1	1
     @Override
-    public int SetLowerSystemVolume() {
+    public int setLowerSystemVolume() {
         try {
             AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
             am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND);
@@ -224,7 +224,7 @@ public class ZtlManager3128 extends ZtlManager {
 
     //设置系统亮度值(需支持pwm设置)	1
     @Override
-    public int SetSystemBrightness(int brightness) {
+    public int setSystemBrightness(int brightness) {
         Log.d("Arctan", "ztl enter set ");
         try {
             if (brightness >= 0 && brightness <= 255) {

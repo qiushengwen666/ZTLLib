@@ -10,16 +10,13 @@ import java.io.IOException;
 
 import ZtlApi.ZtlManager;
 
+//20200916 去掉了数字openPort。新的app必须使用字符类型的gpio 实现51 71兼容
+
 class Gpio {
     private static final String TAG = "GPIO";
     private int mPort;
     private boolean isGpioPortPrepared = false;
-
-    public static final int TYPE_DIRECTION_IN = -1;
-    public static final int TYPE_DIRECTION_OUT = -2;
-    public static final int TYPE_VALUE_HIGH = 1;
-    public static final int TYPE_VALUE_LOW = 0;
-    public static final int TYPE_UNKONW = -10000;
+    
     private File mGpioExport = null;
     private File mGpioUnExport = null;
     private File mGpioPort = null;
@@ -30,44 +27,26 @@ class Gpio {
     private String gpio_unexport = "/sys/class/gpio/unexport";
     private String gpio_port = "/sys/class/gpio/gpio";
 
+    String gpio_name;
+
     public Gpio() {
-
-    }
-
-    public Gpio(int port) {
-        if (isGpioPortPrepared == false){
-            return;
-        }
-        open(port);
     }
 
     //直接输入GPIO7_A5 之类 省得每次都按计算器
-    public Gpio(String port) {
-        if (isGpioPortPrepared == false){
-            return;
-        }
-        open(port);
-    }
+    public boolean open(String strPort) {
+        if (strPort == null || strPort.isEmpty() )
+            return false;
 
-    public boolean open(int port) {
+        gpio_name = strPort;
 
-        this.mPort = port;
+        //71 51兼容
+        int nValue = ZtlManager.GetInstance().gpioStringToInt(strPort);
+
+        this.mPort = nValue;
         this.mGpioExport = new File(this.gpio_export);
         this.mGpioUnExport = new File(this.gpio_unexport);
         this.isGpioPortPrepared = prepare_gpio_port(this.mPort);
         return isGpioPortPrepared;
-    }
-
-    //直接输入GPIO7_A5 之类 省得每次都按计算器
-    public boolean open(String port) {
-        if (isGpioPortPrepared == false){
-            return false;
-        }
-        if (port == null || port.isEmpty() || port.length() != 8)
-            return false;
-
-        int nValue = ZtlManager.GetInstance().gpioStringToInt(port);
-        return open(nValue);
     }
 
     //获取当前GPIO的Direction
@@ -196,10 +175,9 @@ class Gpio {
                     Log.e(TAG, "正在申请权限");
                     writeGpioNode(file, value);
                 } else {
+                    Log.e(TAG, "writeGpioNode " + gpio_name + " 错误");
                     e.printStackTrace();
-                    Log.e(TAG, file.getAbsolutePath());
                 }
-
             }
         }
     }
@@ -217,7 +195,10 @@ class Gpio {
 
             this.mGpioPort = new File(path);
             if (this.mGpioPort.exists() == false) {
-                Log.e(TAG, "系统没有导出这个io口。请看文档或查询定昌技术支持" + mPort);
+                if( gpio_name != null){
+                    Log.e(TAG, "系统没有导出。"+ gpio_name+ "请看文档或查询定昌技术支持");
+                }
+
                 lastError = "系统没有导出这个io口。请看文档或查询定昌技术支持" + mPort;
                 return false;
             }
@@ -241,7 +222,6 @@ class Gpio {
     void gpio_free() {
         writeGpioNode(this.mGpioUnExport, Integer.toString(this.mPort));
     }
-
 
     private String readGpioNode(File file) {
         BufferedReader reader = null;

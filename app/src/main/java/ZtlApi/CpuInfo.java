@@ -1,32 +1,17 @@
 package ZtlApi;
 
 
-import android.os.Build;
-import android.os.Debug;
-import android.util.Log;
-
-import androidx.annotation.RequiresApi;
-
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import javax.microedition.khronos.opengles.GL10;
-
-import ZtlApi.ZtlManager;
 
 public class CpuInfo {
     // /sys/devices/system/cpu/

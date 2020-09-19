@@ -89,7 +89,7 @@ public class ZtlManagerA33_A64 extends ZtlManager{
 
 	//增大音量，音量+1	1
 	@Override
-	public int SetRaiseSystemVolume(){
+	public int setRaiseSystemVolume(){
 		try {
 		 AudioManager am=(AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
 		 am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND);
@@ -103,7 +103,7 @@ public class ZtlManagerA33_A64 extends ZtlManager{
 	
 	//减小音量，音量-1	1
 	@Override
-	public int SetLowerSystemVolume(){
+	public int setLowerSystemVolume(){
 		try {
 			AudioManager am=(AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
 			am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND);
