@@ -1,0 +1,1 @@
+adb pull /data/app/com.lxp.lipstick-1/lib/arm/libserial_port.so
