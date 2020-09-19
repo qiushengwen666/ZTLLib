@@ -68,6 +68,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
+//20200910 添加禁用/启动网络ADB
 //20200918 添加设置亮度\增大亮度\减少亮度接口(Helper实现)
 //         修复增加音量问题,增加\减少音量设置的是铃声,设置音量接口设置的是媒体音量.现在都改成设置媒体音量.
 //20200916 废弃int类型的GPIO接口，以后只能使用字符串类型的GPIO接口。
@@ -97,7 +98,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getAPIVersion() {
-        return "2020/09/18";
+        return "2020/09/19";
     }
 
     protected Context mContext;
@@ -1934,6 +1935,23 @@ public class ZtlManager {
             //if(CameraPublishActivity.DEBUG)  Log.e("getloaclIp exception", ex.toString());
         }
         return "";
+    }
+
+    //网络-禁用或启动网络adb
+    public void setNetAdb(Boolean bEnable){
+        if (mContext == null){
+            Log.e("上下文为空","不执行");
+            return;
+        }
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "set_net_adb");
+        intent.putExtra("enable", bEnable);
+        mContext.startService(intent);
     }
 
     /*
