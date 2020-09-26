@@ -103,7 +103,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getAPIVersion() {
-        return "2020/09/24";
+        return "2020/09/26";
     }
 
     protected Context mContext;
@@ -342,7 +342,6 @@ public class ZtlManager {
      *	android:sharedUserId="android.uid.system"
      *	<permission android:name="android.permission.DEVICE_POWER"></permission>
      */
-
     //系统-休眠 需要系统签名，所以交给Helper
     @Deprecated
     public void goToSleep() {
@@ -377,7 +376,6 @@ public class ZtlManager {
         intent.setComponent(componetName);
         intent.putExtra("cmd", "sleep");
         mContext.startService(intent);
-
     }
 
     //系统-休眠唤醒  需要系统签名，所以交给Helper
