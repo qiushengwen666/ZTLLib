@@ -6,6 +6,7 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -68,7 +69,11 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
-//20200910 添加禁用/启动网络ADB
+//20200926 添加获取IPv4的IP地址
+//20200924 添加是否背光反向接口，传入true为反向，false不反向。
+//         添加获取背光是否方向接口返回值boolean，true为反向，false为不反向.
+//20200921 修改设置DPI接口，原来的接口不可用，现在直接输入120-360之间的DPI即可。
+//20200919 添加禁用/启动网络ADB 添加恢复出厂设置接口(Helper实现)
 //20200918 添加设置亮度\增大亮度\减少亮度接口(Helper实现)
 //         修复增加音量问题,增加\减少音量设置的是铃声,设置音量接口设置的是媒体音量.现在都改成设置媒体音量.
 //20200916 废弃int类型的GPIO接口，以后只能使用字符串类型的GPIO接口。
@@ -77,14 +82,14 @@ import static java.util.Calendar.YEAR;
 //20200911 添加获取运行内存接口。
 //20200910 添加守护/取消守护进程接口，添加守护/取消守护服务接口(守护保持不被杀死，取消守护也不是杀死这个服务)。
 //         新增设置系统时间接口，关机接口，重启接口。因为这些需要系统权限与系统签名，有的用户可能没有条件。交给ZtlHelper转发。
-//20200901 修改定时开关机接口，恢复成以前的版本(把关于发送广播给ztlhelper的都删了)。
+//20200901 修改定时开关机接口，恢复成以前的版本(把关于发送广播给ZtlHelper的都删了)。
 //20200829 去除i2c-1 加密验证。
 //         弃用设置和获取触摸方向。添加两个新的设置和触摸方向接口。
-//20200824 添加停止自动重连wifi，指定wifi重连，需要输入wifi的ssid与密码。(配合ztlhelper)
+//20200824 添加停止自动重连wifi，指定wifi重连，需要输入wifi的ssid与密码。(配合Helper)
 //20200820 添加获取联网方式接口，-1=未知 0=以太网 1=wifi 2=2G 3=3G 4=4G 5=5G
-//20200813 定时开关机函数添加发送广播方式，ztlhelper负责执行定时开关机。
+//20200813 定时开关机函数添加发送广播方式，Helper负责执行定时开关机。
 //20200731 添加静默安装并重启、静默安装启动APP等函数。
-//20200730 添加同步网络时间函数，发送广播，ztlhelper负责执行同步网络时间。
+//20200730 添加同步网络时间函数，发送广播，Helper负责执行同步网络时间。
 //20200724 添加安装重启接口，发送安装广播，收到广播后进行安装与重启。
 //20200722 添加时间-立刻同步网络时间、自定义同步周期，都是发送广播版本
 //         需要配合智通利助手使用或者接收广播的方式。
@@ -98,7 +103,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getAPIVersion() {
-        return "2020/09/19";
+        return "2020/09/24";
     }
 
     protected Context mContext;
@@ -240,9 +245,9 @@ public class ZtlManager {
     }
 
     //系统-获取运行内存,单位：字节
-    public static long getFreeMemorySize(Context context) {
+    public long getFreeMemorySize() {
         ActivityManager.MemoryInfo outInfo = new ActivityManager.MemoryInfo();
-        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager am = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
         am.getMemoryInfo(outInfo);
         long avaliMem = outInfo.availMem;
         return avaliMem;
@@ -264,8 +269,8 @@ public class ZtlManager {
 
     //系统-储存-获取外部SD卡路径
     private String getAppRootOfSdCardRemovable() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return null;
         }
         if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
@@ -341,8 +346,8 @@ public class ZtlManager {
     //系统-休眠 需要系统签名，所以交给Helper
     @Deprecated
     public void goToSleep() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
@@ -360,8 +365,8 @@ public class ZtlManager {
 
     //系统-休眠
     public void sleep() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -393,8 +398,8 @@ public class ZtlManager {
 
     //唤醒-休眠唤醒
     public void awake() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -416,8 +421,8 @@ public class ZtlManager {
 
     //系统-关机     ZtlHelper实现
     public void shutdown() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -433,8 +438,8 @@ public class ZtlManager {
     //系统-重启	转发给ZtlHelper
     @Deprecated
     public void rebootSystem() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Intent intent = new Intent("reboot");
@@ -446,8 +451,8 @@ public class ZtlManager {
 
     //系统-重启     ZtlHelper实现  参数传入延迟时间，如果要马上执行传入0即可。
     public void reboot(int delay) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -500,8 +505,8 @@ public class ZtlManager {
 
     //系统-APP-启动另一个APP
     public void startActivity(String pkgName, String pkgActivity) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         if (pkgName != null && pkgActivity != null) {
@@ -554,8 +559,8 @@ public class ZtlManager {
     //系统-APP-APP完成安装后启动APP   ZtlHelper实现
     public void installAppAndStartUp(String filePath, String pkgName) {
 
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
 
@@ -578,8 +583,8 @@ public class ZtlManager {
 
     //ZtlHelper安装APK        ZtlHelper实现
     public void installApp(String filePath, String pkgName) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -596,9 +601,9 @@ public class ZtlManager {
     }
 
     //系统-守护某个进程,保持置定     appservice实现
-    public void keepActivity(String package_name) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+    public void keepActivity(String pkgName) {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName("com.ztl.appservice",
@@ -607,14 +612,14 @@ public class ZtlManager {
         Intent intent = new Intent();
         intent.setComponent(componetName);
         intent.putExtra("cmd", "keepActivity");//value填的需要和ztlhelper统一
-        intent.putExtra("package", package_name);
+        intent.putExtra("package", pkgName);
         mContext.startService(intent);
     }
 
     //系统-取消守护某个进程       appservice实现
     public void unKeepActivity() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -629,8 +634,8 @@ public class ZtlManager {
 
     //系统-守护某个服务，保持不被清除  appservice实现
     public void keepService(String package_name, String service) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -647,8 +652,8 @@ public class ZtlManager {
 
     //系统-取消守护某个服务,不是杀死这个服务  appservice实现
     public void unkeepService() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -663,8 +668,8 @@ public class ZtlManager {
 
     //系统-设置系统桌面 todo 如果要恢复成默认桌面，参数传入null
     public void setLauncher(String pkgage, String Activity) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -681,8 +686,8 @@ public class ZtlManager {
 
     //系统-判断包名对应的APP是否存在
     public boolean isAppExist(String pkgName) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return false;
         }
         ApplicationInfo info;
@@ -702,9 +707,10 @@ public class ZtlManager {
      *	<uses-permission android:name="android.permission.MASTER_CLEAR"/>
      */
     //系统-恢复出厂设置	1
+    @Deprecated
     public void recoverySystem() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Intent clearIntent = new Intent("android.intent.action.MASTER_CLEAR");
@@ -712,10 +718,28 @@ public class ZtlManager {
         mContext.sendBroadcast(clearIntent);
     }
 
+    //恢复出厂设置 因为需要权限，交给ZtlHelper执行
+    public void resetSystem() {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "resetSystem");
+        mContext.startService(intent);
+
+    }
+
     //系统-打开设置界面	1
     public int startSettings() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         try {
@@ -729,8 +753,8 @@ public class ZtlManager {
 
     //系统-打开wifi设置界面	1
     public int startWifiSettings() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         try {
@@ -743,10 +767,9 @@ public class ZtlManager {
     }
 
     //系统-显示导航栏与状态栏	1
-    @Deprecated
     public void setOpenSystemBar() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Intent systemBarIntent = new Intent("com.ding.systembar.chang");
@@ -756,10 +779,9 @@ public class ZtlManager {
     }
 
     //系统-隐藏导航栏与状态栏	1
-    @Deprecated
     public void setCloseSystemBar() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Intent systemBarIntent = new Intent("com.ding.systembar.chang");
@@ -769,6 +791,7 @@ public class ZtlManager {
     }
 
     //系统-是否已打开导航栏与状态栏	1
+
     /**
      * @deprecated
      */
@@ -792,8 +815,8 @@ public class ZtlManager {
 
     //系统-打开USB调试	1
     public void setOpenUsbDebug() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Intent systemBarIntent = new Intent("com.ding.adbsetting");
@@ -804,8 +827,8 @@ public class ZtlManager {
 
     //系统-关闭USB调试	1
     public void setCloseUsbDebug() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Intent systemBarIntent = new Intent("com.ding.adbsetting");
@@ -892,7 +915,7 @@ public class ZtlManager {
                     Log.e(TAG, "此函数连接失败，请联系厂家解决");
                 }
             } else {
-                Log.e(TAG,"testsu的权限不通过");
+                Log.e(TAG, "testsu的权限不通过");
                 e.printStackTrace();
                 Log.e(TAG, "无SU执行权限,请联系厂家解决");
                 return -1;
@@ -943,8 +966,8 @@ public class ZtlManager {
 
     //时间-发送同步时间广播   ZtlHelper实现
     public void syncNetworkTime() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -960,8 +983,8 @@ public class ZtlManager {
 
     //时间-发送同步时间周期       ZtlHelper实现
     public void setSyncNetworkTimePeroid(int peroid_in_minute) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -992,6 +1015,16 @@ public class ZtlManager {
 		  }
 	}*/
 
+    //时间-设置系统日期	1
+    public void setSystemDate(int year, int month, int day) {
+        LOGD("set system Date " + year + "/" + month + "/" + day);
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.YEAR, year);
+        c.set(Calendar.MONTH, month - 1);
+        c.set(Calendar.DAY_OF_MONTH, day);
+        SystemClock.setCurrentTimeMillis(c.getTimeInMillis());
+    }
+
     //时间-设置系统时间	1
     @RequiresPermission(Manifest.permission.SET_TIME)
     public void setSystemTime(int hour, int minute, int second, int millisecond) {
@@ -1009,8 +1042,8 @@ public class ZtlManager {
     //时间-设置系统时间     ZtlHelper实现
     //注意：使用此接口月份需要-1 因为需要系统签名 给Helper实现
     public void setSystemTime(Calendar cal) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1025,18 +1058,9 @@ public class ZtlManager {
 
     }
 
-    //时间-设置系统日期	1
-    public void setSystemDate(int year, int month, int day) {
-        LOGD("set system Date " + year + "/" + month + "/" + day);
-        Calendar c = Calendar.getInstance();
-        c.set(Calendar.YEAR, year);
-        c.set(Calendar.MONTH, month - 1);
-        c.set(Calendar.DAY_OF_MONTH, day);
-        SystemClock.setCurrentTimeMillis(c.getTimeInMillis());
-    }
-
     //时间-设置系统日期与时间
     @RequiresPermission(Manifest.permission.SET_TIME)
+    @Deprecated
     public void setSystemDateAndTime(int year, int month, int day, int hour, int minute) {
 
         //Log.d("test","setDateTimeA33");
@@ -1057,8 +1081,8 @@ public class ZtlManager {
 
     //时间-判断系统的时区是否是自动获取的	1
     public boolean getTimeZoneAuto() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return false;
         }
         try {
@@ -1072,8 +1096,8 @@ public class ZtlManager {
 
     //时间-设置系统的时区是否自动获取
     public int setAutoTimeZone(int checked) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         try {
@@ -1089,8 +1113,8 @@ public class ZtlManager {
 
     //时间-判断系统的时间是否自动获取的	1
     public boolean getDateTimeAuto() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return false;
         }
         try {
@@ -1105,8 +1129,8 @@ public class ZtlManager {
 
     //时间-设置系统的时间是否需要自动获取
     public int setAutoDateTime(int checked) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         try {
@@ -1123,6 +1147,7 @@ public class ZtlManager {
     /***3399 api****/
     //时间-设置定时开机时间   目前测试用的这个
     //存在一个问题，如果设置好定时开关机，再把系统时间往过去的时间调整，会导致执行不开关机。
+    @Deprecated
     public void setSchedulePowerOn(int hour, int minute, boolean enableSchedulPowerOn) {
 
         long now = System.currentTimeMillis();
@@ -1155,9 +1180,10 @@ public class ZtlManager {
     }
 
     //时间-设置定时关机时间  每天   目前测试用的这个
+    @Deprecated
     public void setSchedulePowerOff(int hour, int minute, boolean enableSchedulPowerOff) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         if (enableSchedulPowerOff == false) {
@@ -1192,6 +1218,7 @@ public class ZtlManager {
     }
 
     //时间-定时开机0，指定某一天 待测试 这里月份是否要减一 测试结果：month确实要-1才能用   目前测试用的这个
+    @Deprecated
     public void setPowerOnAlarm(int year, int month, int day, int hour, int minute, boolean enableSchedulPowerOn) {
 
         if (enableSchedulPowerOn == false)
@@ -1208,9 +1235,10 @@ public class ZtlManager {
     }
 
     //时间-定时关机，指定某一天 目前测试用的这个
+    @Deprecated
     public void setPowerOffAlarm(int year, int month, int day, int hour, int minute, boolean enableSchedulPowerOff) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         Calendar c = Calendar.getInstance();
@@ -1241,30 +1269,10 @@ public class ZtlManager {
         setSystemProperty("persist.sys.powerOffTimeMillis", targetTime + "");
     }
 
-    //时间-定时开机，转发给Helper
-    public void timingOn(int hour, int minute, int weekdays) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
-            return;
-        }
-        ComponentName componetName = new ComponentName(
-                "com.ztl.helper",  //这个参数是另外一个app的包名
-                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
-
-        Intent intent = new Intent();
-        intent.setComponent(componetName);
-        intent.putExtra("cmd", "timingOn"); //value填的需要和ztlhelper统一
-        intent.putExtra("hour", hour);  //这里填要传入的参数，第一个name需要和ztlhelper统一
-        intent.putExtra("minute", minute);
-        intent.putExtra("weekdays", weekdays);
-
-        mContext.startService(intent);
-    }
-
     //时间-定时关机，转发给Helper
     public void timingOff(int hour, int minute, int weekdays) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1281,13 +1289,24 @@ public class ZtlManager {
         mContext.startService(intent);
     }
 
-    //取消定时开关机
-    public void cancelSetPowerOffAndOn(boolean isCancelePowerOffAndOn) {
-        if (isCancelePowerOffAndOn) {
-            setSystemProperty("persist.sys.powerOffTime", "unknown");
-            setSystemProperty("persist.sys.powerOffEnable", "false");
-        } else
+    //时间-定时开机，转发给Helper
+    public void timingOn(int hour, int minute, int weekdays) {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
+        }
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "timingOn"); //value填的需要和ztlhelper统一
+        intent.putExtra("hour", hour);  //这里填要传入的参数，第一个name需要和ztlhelper统一
+        intent.putExtra("minute", minute);
+        intent.putExtra("weekdays", weekdays);
+
+        mContext.startService(intent);
     }
 
     //时间-辅助函数
@@ -1313,8 +1332,8 @@ public class ZtlManager {
 
     //显示-获取屏幕y轴像素	1
     public int getDisplayHeight() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
@@ -1326,8 +1345,8 @@ public class ZtlManager {
 
     //显示-获取屏幕x轴像素	1
     public int getDisplayWidth() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
@@ -1339,8 +1358,8 @@ public class ZtlManager {
 
     //显示-获取显示密度(dpi)
     public int getDisplayDensity() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         WindowManager wm = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
@@ -1383,6 +1402,7 @@ public class ZtlManager {
                 lcdDensity = String.valueOf(dpis);
             }
         }
+        execRootCmdSilent("wm density " + dpis);
         setSystemProperty(LCD_DENSITY_PROP, lcdDensity);
         execRootCmdSilent("reboot");
 /*
@@ -1392,6 +1412,24 @@ public class ZtlManager {
 	   intent2.putExtra("window", 0);
 	   mContext.sendBroadcast(intent2);
 */
+    }
+
+    //是否设置背光反向
+    public void reverseBrighness(boolean true_or_false) {
+        if (true_or_false) {
+            setSystemProperty("persist.ztl.reverseBri", "1");
+        } else {
+            setSystemProperty("persist.ztl.reverseBri", "0");
+        }
+    }
+
+    //获取背光是否已反向
+    public boolean isReverseBrighness() {
+        String getProperty = getSystemProperty("persist.ztl.reverseBri", "1");
+        if (getProperty.equals("1")) {
+            return true;
+        } else
+            return false;
     }
 
     //显示-调整LCD背光
@@ -1434,8 +1472,8 @@ public class ZtlManager {
 
     //显示-获取当前亮度	1
     public int getSystemBrightness() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         int systemBrightness = 0;
@@ -1473,9 +1511,9 @@ public class ZtlManager {
     }
 
     //调大亮度 因为需要系统权限，交给ZtlHelper
-    public void increaseBrightness(){
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+    public void increaseBrightness() {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1490,9 +1528,9 @@ public class ZtlManager {
     }
 
     //降低亮度 因为需要系统权限，交给ZtlHelper
-    public void decreaseBrightness(){
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+    public void decreaseBrightness() {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1512,8 +1550,8 @@ public class ZtlManager {
     //<permission android:name="android.permission.WRITE_SETTINGS" />
     @Deprecated
     public int setSystemBrightness(int brightness) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         try {
@@ -1538,9 +1576,9 @@ public class ZtlManager {
     }
 
     //设置亮度 因为需要系统权限，交给ZtlHelper
-    public void setBrightness(int brightness){
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+    public void setBrightness(int brightness) {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1557,11 +1595,12 @@ public class ZtlManager {
 
     //显示-设置屏幕方向 传入0 90 180 270
     public void setDisplayOrientation(int rotation) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         if (rotation == getDisplayOrientation()) {
+            Log.e("当前方向", "与旋转方向一致，不执行");
             return;
         }
         int oritation = rotation / 90;
@@ -1765,8 +1804,8 @@ public class ZtlManager {
 
     //显示-设置字体大小
     public void setFontSize(int index) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         int value = index;
@@ -1793,11 +1832,44 @@ public class ZtlManager {
         return null;
     }
 
+    //网络-获取MAC地址 获取的是以太网口的。因为wifi不一定启用
+    public String getMacAddress() {
+        try {
+            return loadFileAsString("/sys/class/net/eth0/address")
+                    .toUpperCase().substring(0, 17);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    //网络-获取以太网IP地址
+    public static String getLocalIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress()) {
+                        String ipAddress = inetAddress.getHostAddress().toString();
+                        if (!ipAddress.contains("::"))
+                            return inetAddress.getHostAddress().toString();
+                    } else
+                        continue;
+                }
+            }
+        } catch (SocketException ex) {
+            //if(CameraPublishActivity.DEBUG)  Log.e("getloaclIp exception", ex.toString());
+        }
+        return "";
+    }
+
     //网络-获取当前连接的网络类型
     //-1 = 未知 0 = 以太网 1 = wifi 2 = 2g 3 = 3g 4 = 4g 5 = 5g
     public int getNetWorkType() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         NetworkInfo ni = getConnectedType(mContext);
@@ -1849,8 +1921,8 @@ public class ZtlManager {
 
     //网络-指定wifi重连       ZtlHelper实现
     public void keepWifiConnect(String SSID, String password) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1869,8 +1941,8 @@ public class ZtlManager {
 
     //网络-停止连接指定wifi     ZtlHelper实现
     public void stopKeepWifiConnect() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1884,23 +1956,12 @@ public class ZtlManager {
         mContext.startService(intent);
     }
 
-    //网络-获取MAC地址 获取的是以太网口的。因为wifi不一定启用
-    public String getMacAddress() {
-        try {
-            return loadFileAsString("/sys/class/net/eth0/address")
-                    .toUpperCase().substring(0, 17);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
 
     // todo 对象序列化
     //网络-设置IP地址与动态静态
     public void setIpConfig(IpConfig ipConfig, int networkType) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1916,31 +1977,10 @@ public class ZtlManager {
         mContext.startService(intent);
     }
 
-    //网络-获取以太网IP地址
-    public static String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
-                NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress()) {
-                        String ipAddress = inetAddress.getHostAddress().toString();
-                        if (!ipAddress.contains("::"))
-                            return inetAddress.getHostAddress().toString();
-                    } else
-                        continue;
-                }
-            }
-        } catch (SocketException ex) {
-            //if(CameraPublishActivity.DEBUG)  Log.e("getloaclIp exception", ex.toString());
-        }
-        return "";
-    }
-
     //网络-禁用或启动网络adb
-    public void setNetAdb(Boolean bEnable){
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+    public void setNetAdb(boolean bEnable) {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(
@@ -1954,14 +1994,38 @@ public class ZtlManager {
         mContext.startService(intent);
     }
 
+    @RequiresPermission(Manifest.permission.INTERNET)
+    //获取IPv4地址
+    public static String getIPv4(String eth0, String wlan0, String ppp0) {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = en.nextElement();
+                if (eth0.equals(intf.getDisplayName()) == false || wlan0.equals(intf.getDisplayName()) == false || ppp0.equals(intf.getDisplayName()) == false) { //判断网口是否在使用，判断是否为我们获取的网口
+                    continue;
+                }
+
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        return inetAddress.getHostAddress().toString();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "获取IP信息出错");
+        }
+
+        return null;
+    }
+
     /*
      *	注意：获取SIM卡信息需要声明权限
      *	<uses-permission android:name="android.permission.READ_PHONE_STATE" />
      */
     //网络-获取SIM卡IMEI信息	1
     public String getSimImei() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return "";
         }
         String imei = null;
@@ -1984,8 +2048,8 @@ public class ZtlManager {
 
     //网络-获取SIM卡tel信息	0
     public String getSimTel() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return "";
         }
         String tel = null;
@@ -2009,8 +2073,8 @@ public class ZtlManager {
 
     //网络-获取SIM卡iccid信息		1
     public String getSimIccid() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return "";
         }
         String iccid = null;
@@ -2032,8 +2096,8 @@ public class ZtlManager {
 
     //网络-获取SIM卡imsi信息	1
     public String getSimImsi() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return "";
         }
         String imsi = null;
@@ -2055,8 +2119,8 @@ public class ZtlManager {
 
     //网络-获取运营商信息
     public String getSimOperator() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return "";
         }
         TelephonyManager telManager = (TelephonyManager) mContext
@@ -2147,8 +2211,10 @@ public class ZtlManager {
 
     //GPIO计算方式
     public int gpioStringToInt(String port) {
-        if (port.contains("PE")){
 
+        if (port.contains("GPIO") == false) {
+            Log.e(TAG, "传入参数错误,请传入GPIO7_A5之类的，实际以规格书为准");
+            return -1;
         }
         int A = port.charAt(4);
         int B = port.charAt(6);
@@ -2173,6 +2239,7 @@ public class ZtlManager {
         gpioStringToInt(port);
         if (gpio.open(port) == false)
             return -1;
+        gpio.setDirection("out");
         return gpio.getValue();
     }
 
@@ -2186,15 +2253,15 @@ public class ZtlManager {
 //    }
 
     //获取GPIO检测输入的值
-    public int getGpioValue(String port, String direction) {
+    public int getGpioInValue(String port) {
         Gpio gpio = new Gpio();
 
         gpioStringToInt(port);
 
         if (gpio.open(port) == false)
             return -1;
-        gpio.setDirection(direction);
-        return gpio.getValue(direction);
+        gpio.setDirection("in");
+        return gpio.getValue();
     }
 
     //设置GPIO输入
@@ -2227,8 +2294,8 @@ public class ZtlManager {
 
     //媒体-获取最大音量	1
     public int getSystemMaxVolume() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
@@ -2238,8 +2305,8 @@ public class ZtlManager {
 
     //媒体-获取当前音量	1
     public int getSystemCurrenVolume() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
@@ -2251,7 +2318,7 @@ public class ZtlManager {
     public int setRaiseSystemVolume() {
         int curVolume = getSystemCurrenVolume();
         curVolume++;
-        if (curVolume > getSystemMaxVolume()){
+        if (curVolume > getSystemMaxVolume()) {
             curVolume = getSystemMaxVolume();
         }
         return setSystemVolumeIndex(curVolume);
@@ -2262,7 +2329,7 @@ public class ZtlManager {
     public int setLowerSystemVolume() {
         int curVolume = getSystemCurrenVolume();
         curVolume--;
-        if (curVolume < 0){
+        if (curVolume < 0) {
             curVolume = 0;
         }
         return setSystemVolumeIndex(curVolume);
@@ -2271,8 +2338,8 @@ public class ZtlManager {
 
     //媒体-设置音量值		1
     public int setSystemVolumeIndex(int index) {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return -1;
         }
         try {
@@ -2371,8 +2438,8 @@ public class ZtlManager {
 
     //打开CPU监控
     public void openMonitor() {
-        if (mContext == null){
-            Log.e("上下文为空","不执行");
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
             return;
         }
         ComponentName componetName = new ComponentName(

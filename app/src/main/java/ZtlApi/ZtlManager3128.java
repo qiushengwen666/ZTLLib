@@ -115,46 +115,6 @@ public class ZtlManager3128 extends ZtlManager {
         return usbPath;
     }
 
-    /*
-     *	设置系统日期和时间，需要系统签名
-     */
-    //设置系统日期
-/*	public void setSystemDate(int year,int month,int day)
-	{
-		  LOGD("set system Date "+year+"/"+month+"/"+day);
-		  Calendar c = Calendar.getInstance();
-		  c.set(Calendar.YEAR, year);
-		  c.set(Calendar.MONTH, month+1);
-		  c.set(Calendar.DAY_OF_MONTH, day);
-		  long when = c.getTimeInMillis();
-		  if(when / 1000 < Integer.MAX_VALUE){
-		      ((AlarmManager)mContext.getSystemService(Context.ALARM_SERVICE)).setTime(when);
-		  }
-	}*/
-
-   /* //设置系统时间	1
-    @Override
-    public void setSystemTime(int hour, int minute, int second, int millisecond) {
-        LOGD("set system time " + hour + ":" + minute);
-        Intent mIntent = new Intent("com.ztl.action.settime");
-        mIntent.putExtra("hour", hour);
-        mIntent.putExtra("minute", minute);
-        mIntent.putExtra("second", second);
-        mIntent.putExtra("millisecond", millisecond);
-        mContext.sendBroadcast(mIntent);
-
-//		  Calendar c = Calendar.getInstance();
-//		  c.set(Calendar.HOUR_OF_DAY, hour);
-//		  c.set(Calendar.MINUTE, minute);
-//		  c.set(Calendar.SECOND, second);
-//		  c.set(Calendar.MILLISECOND, millisecond);
-//		  long when = c.getTimeInMillis();
-//		  if(when / 1000 < Integer.MAX_VALUE){
-//		      ((AlarmManager)mContext.getSystemService(Context.ALARM_SERVICE)).setTime(when);
-//		  }
-
-    }*/
-
     //设置系统日期	1
     @Override
     public void setSystemDate(int year, int month, int day) {
@@ -259,7 +219,6 @@ public class ZtlManager3128 extends ZtlManager {
         String state = getSystemProperty("persist.sys.ztlOrientation", "0");
         return Integer.valueOf(state).intValue();
     }
-
 
     //获取当前GPIO的值
     public int Getcurrentgpio(int port) {

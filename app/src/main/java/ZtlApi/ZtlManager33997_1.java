@@ -12,6 +12,8 @@ import android.os.SystemProperties;
 
 public class ZtlManager33997_1 extends ZtlManager{
 
+    static String TAG = "ZtlManager";
+
 	ZtlManager33997_1(){
 		DEBUG_ZTL = SystemProperties.get("persist.sys.ztl.debug","false").equals("true");
 	}
@@ -106,7 +108,7 @@ public class ZtlManager33997_1 extends ZtlManager{
 	//使能左右分屏功能
 	@Override
 	public void setSplitScreenLeftRightEnable(boolean isEnable){
-		Log.e("ztllib", "unsupport fucntion now for this board.todo later.");
+		Log.e(TAG, "unsupport fucntion now for this board.todo later.");
 /*		if(isEnable){
 			setSystemProperty("persist.sys.leftRightEnable","true");
 		}else{
@@ -118,7 +120,7 @@ public class ZtlManager33997_1 extends ZtlManager{
 	//使能上下分屏功能
 	@Override
 	public void setSplitScreenUpDownEnable(boolean isEnable){
-		Log.e("ztllib", "unsupport fucntion now for this board.todo later.");
+		Log.e(TAG, "unsupport fucntion now for this board.todo later.");
 /*		if(isEnable){
 			setSystemProperty("persist.sys.upDownEnable","true");
 		}else{

@@ -2,27 +2,15 @@ package ZtlApi;
 
 import android.content.Context;
 import android.content.Intent;
-
-import java.util.Calendar;
-import java.io.File;
-import android.os.SystemClock;
+import android.media.AudioManager;
+import android.os.SystemProperties;
 import android.util.Log;
 
-import android.os.SystemProperties;
-
-import android.media.AudioManager;
-
 import java.io.BufferedReader;
-
+import java.io.File;
 import java.io.FileReader;
 import java.util.HashMap;
 import java.util.Map;
-
-import static java.util.Calendar.DAY_OF_MONTH;
-import static java.util.Calendar.HOUR_OF_DAY;
-import static java.util.Calendar.MINUTE;
-import static java.util.Calendar.MONTH;
-import static java.util.Calendar.YEAR;
 
 public class ZtlManagerA33_A64 extends ZtlManager{
 	
@@ -210,6 +198,11 @@ public class ZtlManagerA33_A64 extends ZtlManager{
 
 	@Override
 	public int gpioStringToInt(String strGpioName) {
+        if (strGpioName.contains("PE") == false){
+            Log.e(TAG,"传入参数错误,请传入GPIO7_A5之类的，实际以规格书为准");
+            return -1;
+        }
+
 		Object v = gpios.get( strGpioName );
 		if (v == null){
 			Log.e("gpio","name"+strGpioName+"缺乏映射，请联系管理员添加");

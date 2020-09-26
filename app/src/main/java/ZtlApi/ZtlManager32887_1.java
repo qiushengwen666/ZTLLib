@@ -1,17 +1,22 @@
 package ZtlApi;
 
+import android.content.Context;
 import android.content.Intent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+
+import android.os.storage.StorageManager;
 import android.util.Log;
 import android.os.SystemProperties;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Map;
+import java.util.Vector;
 
 public class ZtlManager32887_1 extends ZtlManager {
 	// Arctan add
@@ -68,40 +73,45 @@ public class ZtlManager32887_1 extends ZtlManager {
 	}
 
 	//获取U盘路径	1
-	@Override
-	public String getUsbStoragePath(){
-		String usbPath = null;
-		String usbBasePath = "/storage/";
+    @Override
+    public String getUsbStoragePath() {
+        Vector<String> mUsbVector = new  Vector<>();
+        String usbPath = null;
+        StorageManager mstorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
 
-		File file = new File(usbBasePath);
-		try{
-			if(file.exists() && file.isDirectory()){ //open usb_storage
-				File[] files = file.listFiles();
-				if( files.length > 0){
-					usbPath = files[0].getAbsolutePath();
-					LOGD("steve : get file path " + usbPath);
-					if(usbPath.contains("USB_DISK")){ //open USB_DISK
-						LOGD("steve : open " + usbPath);
-						File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
-						if(usbFile.exists() && usbFile.isDirectory()){
-							File[] usbFiles = usbFile.listFiles();
-							if( usbFiles.length > 0){
-								usbPath = usbFiles[0].getAbsolutePath();	//udisk0
-								LOGD("steve : usbPath " + usbPath);
-							}
-						}
-					}//end open USB_DISK
-				}
+        try {
+            Class<?> diskIndoClass = Class.forName("android.os.storage.DiskInfo");
+            Method isUsb = diskIndoClass.getMethod("isUsb");
+            Method isSd = diskIndoClass.getMethod("isSd");
+            Class<?> volumeClass = Class.forName("android.os.storage.VolumeInfo");
+            Method volumeDisk = volumeClass.getMethod("getDisk");
+            Method fsUuid = volumeClass.getMethod("getFsUuid");
+            Method getLabel = volumeClass.getMethod("getDescription");
+            Method path = volumeClass.getMethod("getPath");
+            Method getVolumes = StorageManager.class.getDeclaredMethod("getVolumes");
+            List volumeInfoList = (List)getVolumes.invoke(mstorageManager);
 
-			}//end open usb_storage
-		}catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-		return usbPath;
-	}
+            for(int i = 0,j = 0; i < volumeInfoList.size(); ++i) {
+                if (volumeDisk.invoke(volumeInfoList.get(i)) != null && (Boolean)isUsb.invoke(volumeDisk.invoke(volumeInfoList.get(i)))) {
+                    usbPath = "/storage/" + fsUuid.invoke(volumeInfoList.get(i));
+//                    return usbPath;
+//                    Log.d(TAG, "getUsbStoragePath3: "+userLabel +" path "+usbPath);
+//                    mUsbDevice[j++]=userLabel+";"+usbPath;
+                    mUsbVector.add(usbPath);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        if (mUsbVector.size() > 0){
+            return mUsbVector.get(0);
+        }else {
+            return null;
+        }
+    }
 
-	//获取屏幕方向	1
+    //获取屏幕方向	1
 	@Override
 	public int getDisplayOrientation(){
 		//	String state = getSystemProperty("persist.sys.ztlOrientation","0");
